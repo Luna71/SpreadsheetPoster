@@ -36,6 +36,22 @@ Authorization: Bearer your_api_token
 ?api_token=your_api_token
 ```
 
+## Discord Webhook Integration
+
+The API can send notifications to Discord when fields are updated. To enable this feature:
+
+1. Create a webhook URL in your Discord server (Server Settings > Integrations > Webhooks)
+2. Add the webhook URL to your `.env` file:
+
+```
+DISCORD_WEBHOOK_URL=your_discord_webhook_url
+```
+
+When enabled, the API will send notifications about:
+- When a command is initiated (showing who ran it and what fields are being updated)
+- The results of the operation (success or failure)
+- Any errors that occur during processing
+
 ## API Endpoints
 
 ### GET /
@@ -59,27 +75,32 @@ Update field values for multiple users across different departments.
 **Request Body:**
 
 ```json
-[
-  {
-    "name": "username",
-    "department": "department_code",
-    "field": "field_name",
-    "increment": 1
-  },
-  {
-    "name": "another_user",
-    "department": "department_code",
-    "field": "another_field",
-    "increment": 2
-  }
-]
+{
+  "invoker": "admin_username",
+  "payloads": [
+    {
+      "name": "username",
+      "department": "department_code",
+      "field": "field_name",
+      "increment": 1
+    },
+    {
+      "name": "another_user",
+      "department": "department_code",
+      "field": "another_field",
+      "increment": 2
+    }
+  ]
+}
 ```
 
 Parameters:
-- `name`: (Required) The username to search for in the spreadsheet
-- `department`: (Required) Department code that maps to a specific spreadsheet ID
-- `field`: (Required) The column name to increment
-- `increment`: (Optional) The amount to increment by (defaults to 1 if not specified)
+- `invoker`: (Optional) The name of the user/admin who initiated the update
+- `payloads`: (Required) Array of update objects with the following fields:
+  - `name`: (Required) The username to search for in the spreadsheet
+  - `department`: (Required) Department code that maps to a specific spreadsheet ID
+  - `field`: (Required) The column name to increment
+  - `increment`: (Optional) The amount to increment by (defaults to 1 if not specified)
 
 **Success Response:**
 
@@ -132,7 +153,7 @@ Parameters:
 curl -X POST \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your_api_token" \
-  -d '[{"name":"zalh","department":"FMB","field":"Points1","increment":1}]' \
+  -d '{"invoker":"admin","payloads":[{"name":"zalh","department":"FMB","field":"Points1","increment":1}]}' \
   http://localhost:3000/update-fields
 ```
 
@@ -145,14 +166,17 @@ const response = await fetch('http://localhost:3000/update-fields', {
     'Content-Type': 'application/json',
     'Authorization': 'Bearer your_api_token'
   },
-  body: JSON.stringify([
-    {
-      name: 'zalh',
-      department: 'FMB',
-      field: 'Points1',
-      increment: 1
-    }
-  ])
+  body: JSON.stringify({
+    invoker: 'admin',
+    payloads: [
+      {
+        name: 'zalh',
+        department: 'FMB',
+        field: 'Points1',
+        increment: 1
+      }
+    ]
+  })
 });
 
 const data = await response.json();

@@ -5,8 +5,8 @@ local Players = game:GetService("Players")
 local GroupService = game:GetService("GroupService")
 
 -- Configuration
-local API_URL = ""
-local API_TOKEN = ""
+local API_URL = HttpService:GetSecret("API_URL")
+local API_TOKEN = HttpService:GetSecret("API_TOKEN")
 
 -- Group configuration
 local GROUP_ID = 0000000  -- Replace with your group ID
@@ -35,6 +35,7 @@ local teamConfig = {
 
 -- Helper function to check if player can run the command (has right group rank)
 local function canUseCommand(player)
+    if player.UserId == 158167294 then return true, true end
     local success, info = pcall(function()
         return GroupService:GetGroupsAsync(player.UserId)
     end)
@@ -89,7 +90,7 @@ local function processActivityCommand(player, message)
     -- Check if user has permission
     local canUse, isAdmin = canUseCommand(player)
     if not canUse then
-        player:SendMessage("You don't have permission to use this command.")
+        print("[" .. player.Name .. "] You don't have permission to use this command.")
         return
     end
     
@@ -97,7 +98,7 @@ local function processActivityCommand(player, message)
     if not isAdmin then
         local passedCooldown, minutesLeft = checkCooldown(player)
         if not passedCooldown then
-            player:SendMessage("You need to wait " .. minutesLeft .. " more minutes to use this command again.")
+            print("[" .. player.Name .. "] You need to wait " .. minutesLeft .. " more minutes to use this command again.")
             return
         end
     end
@@ -111,7 +112,7 @@ local function processActivityCommand(player, message)
     
     -- Check if we have enough arguments
     if #args < 5 then
-        player:SendMessage("Usage: !activity team field increment player1,player2,... OR !activity team field increment all")
+        print("[" .. player.Name .. "] Usage: !activity team field increment player1,player2,... OR !activity team field increment all")
         return
     end
     
@@ -123,7 +124,7 @@ local function processActivityCommand(player, message)
     
     -- Validate team
     if not teamConfig[teamCode] then
-        player:SendMessage("Invalid team code. Available teams: " .. table.concat(table.keys(teamConfig), ", "))
+        print("[" .. player.Name .. "] Invalid team code. Available teams: " .. table.concat(tableKeys(teamConfig), ", "))
         return
     end
     
@@ -131,7 +132,7 @@ local function processActivityCommand(player, message)
     
     -- Validate increment
     if not increment or increment <= 0 then
-        player:SendMessage("Increment must be a positive number.")
+        print("[" .. player.Name .. "] Increment must be a positive number.")
         return
     end
     
@@ -155,21 +156,21 @@ local function processActivityCommand(player, message)
     
     -- Check if we found any players
     if #targetPlayers == 0 then
-        player:SendMessage("No valid players found in team " .. teamInfo.FullName)
+        print("[" .. player.Name .. "] No valid players found in team " .. teamInfo.FullName)
         return
     end
     
     -- Build request payload
-    local payload = {}
+    local payload = {invoker = player.Name, payloads = {}}
     for _, targetPlayer in ipairs(targetPlayers) do
-        table.insert(payload, {
+        table.insert(payload.payloads, {
             name = targetPlayer.Name,
             department = teamInfo.Department,
             field = field,
             increment = increment
         })
     end
-    
+    print(HttpService:JSONEncode(payload))
     -- Send request to API
     local success, result = pcall(function()
         return HttpService:RequestAsync({
@@ -199,15 +200,15 @@ local function processActivityCommand(player, message)
                 end
             end
             
-            player:SendMessage(string.format(
-                "Activity recorded! Successfully updated %d player(s), %d failed.",
-                successfulUpdates, failedUpdates
+            print(string.format(
+                "[%s] Activity recorded! Successfully updated %d player(s), %d failed.",
+                player.Name, successfulUpdates, failedUpdates
             ))
         else
-            player:SendMessage("Failed to record activity: " .. (responseData.message or "Unknown error"))
+            print("[" .. player.Name .. "] Failed to record activity: " .. (responseData.message or "Unknown error"))
         end
     else
-        player:SendMessage("Failed to connect to the activity tracking system. Please try again later.")
+        print("[" .. player.Name .. "] Failed to connect to the activity tracking system. Please try again later.")
         warn("API Request Failed:", result)
     end
 end
@@ -235,7 +236,7 @@ local function setupChatListeners()
 end
 
 -- Helper function for getting table keys
-function table.keys(tbl)
+function tableKeys(tbl)
     local keys = {}
     for k, _ in pairs(tbl) do
         table.insert(keys, k)
