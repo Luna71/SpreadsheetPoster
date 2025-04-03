@@ -84,6 +84,10 @@ const departmentToSpreadsheetId = {
   'FMB': '1jgEkgAJ2vBE9juWX0b2agsXfQwdjRoHmOCCW0bGrT50',
 };
 
+const fieldMappings = {
+  'ft': 'FUNDA. TRAINING(S)'
+}
+
 // Example route to test API is running
 app.get('/', (req, res) => {
   res.json({ message: 'SpreadsheetRanker API is running' });
@@ -108,6 +112,7 @@ app.post('/update-fields', async (req, res) => {
   try {
     const caller = req.body.invoker || 'Unknown';
     // Validate request body
+ 
     if (!Array.isArray(req.body.payloads) || req.body.payloads.length === 0) {
       return res.status(400).json({
         success: false,
@@ -118,7 +123,8 @@ app.post('/update-fields', async (req, res) => {
     // Send initial webhook notification about command usage
     const targetNames = req.body.payloads.map(update => update.name).join(', ');
     const departmentName = req.body.payloads[0]?.department || 'Unknown';
-    const fieldName = req.body.payloads[0]?.field || 'Unknown';
+    
+    const fieldName = fieldMappings[req.body.payloads[0]?.field] || 'Unknown';
     const incrementValue = req.body.payloads[0]?.increment || 1;
     
     await sendToDiscord(

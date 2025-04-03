@@ -178,7 +178,7 @@ local function processActivityCommand(player, message)
             Method = "POST",
             Headers = {
                 ["Content-Type"] = "application/json",
-                ["Authorization"] = "Bearer " .. API_TOKEN
+                ["Authorization"] = API_TOKEN
             },
             Body = HttpService:JSONEncode(payload)
         })
