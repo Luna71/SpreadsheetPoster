@@ -86,7 +86,7 @@ const departmentToSpreadsheetId = {
 };
 
 const departmentToWebhook = {
-  'FMB': 'https://discord.com/api/webhooks/1357453727824351343/MmyNP4gc6l-X6rWSJ3xMqUfULDunLhccZEdegNSdTVW_Wr4QH7OwblW_alKKQGPJDWmf'
+  'FMB': ''
 }
 
 const fieldMappings = {
