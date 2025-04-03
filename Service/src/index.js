@@ -16,8 +16,9 @@ const API_TOKEN = process.env.API_TOKEN || 'YOUR_SECURE_API_TOKEN_HERE';
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 
 // Function to send messages to Discord webhook
-async function sendToDiscord(title, description, fields) {
-  if (!DISCORD_WEBHOOK_URL) {
+async function sendToDiscord(title, description, fields, department) {
+  const webhookUrl = departmentToWebhook[department];
+  if (!webhookUrl) {
     console.warn('Discord webhook URL not configured. Skipping webhook notification.');
     return;
   }
@@ -35,7 +36,7 @@ async function sendToDiscord(title, description, fields) {
       embeds: [embed]
     };
     
-    await axios.post(DISCORD_WEBHOOK_URL, data, {
+    await axios.post(webhookUrl, data, {
       headers: {
         'Content-Type': 'application/json'
       }
@@ -83,6 +84,10 @@ function verifyApiToken(req, res, next) {
 const departmentToSpreadsheetId = {
   'FMB': '1hfqaBA_a0jr9iJLKmQ_xZ5kiwP5XL-3eXK9uE_bCx_o',
 };
+
+const departmentToWebhook = {
+  'FMB': 'https://discord.com/api/webhooks/1357453727824351343/MmyNP4gc6l-X6rWSJ3xMqUfULDunLhccZEdegNSdTVW_Wr4QH7OwblW_alKKQGPJDWmf'
+}
 
 const fieldMappings = {
   'ft': 'FUNDA. TRAINING(S)'
@@ -136,19 +141,20 @@ app.post('/update-fields', async (req, res) => {
         { name: 'Field', value: fieldName, inline: true },
         { name: 'Increment', value: String(incrementValue), inline: true },
         { name: 'Target Players', value: targetNames, inline: false }
-      ]
+      ],
+      departmentName
     );
 
     // Process each update request
     const results = [];
     for (const update of req.body.payloads) {
       // Validate required fields
-      if (!update.name || !update.department || !update.field) {
+      if (!update.name || !update.department || !fieldName) {
         results.push({
           success: false,
           name: update.name || 'unknown',
           department: update.department || 'unknown',
-          field: update.field || 'unknown',
+          field: fieldName || 'unknown',
           message: 'Missing required fields (name, department, or field)'
         });
         continue;
@@ -161,7 +167,7 @@ app.post('/update-fields', async (req, res) => {
           success: false,
           name: update.name,
           department: update.department,
-          field: update.field,
+          field: fieldName,
           message: `Unknown department: ${update.department}`
         });
         continue;
@@ -174,7 +180,7 @@ app.post('/update-fields', async (req, res) => {
       const incrementResult = await sheetsApi.incrementColumnValueForUser(
         spreadsheetId,
         update.name,
-        update.field,
+        fieldName,
         increment,
         'ENTRY RANK',     // Default sheet name
         'USERNAME'    // Default name column
@@ -185,12 +191,12 @@ app.post('/update-fields', async (req, res) => {
         ...incrementResult,
         name: update.name,
         department: update.department,
-        field: update.field,
+        field: fieldName,
         increment: increment
       });
 
       console.log(
-        `${incrementResult.success ? 'Successfully' : 'Failed to'} increment ${update.field} ` +
+        `${incrementResult.success ? 'Successfully' : 'Failed to'} increment ${fieldName} ` +
         `for user ${update.name} in department ${update.department}`
       );
     }
@@ -224,7 +230,8 @@ app.post('/update-fields', async (req, res) => {
           { name: 'Command Issuer', value: caller, inline: true },
           { name: 'Department', value: departmentName, inline: true },
           { name: 'Errors', value: errorMessages || 'Unknown error', inline: false }
-        ]
+        ],
+        departmentName
       );
     }
 
@@ -242,7 +249,8 @@ app.post('/update-fields', async (req, res) => {
       'An error occurred while processing the activity command.',
       [
         { name: 'Error', value: error.message, inline: false }
-      ]
+      ],
+      departmentName
     );
     
     return res.status(500).json({

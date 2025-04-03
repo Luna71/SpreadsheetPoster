@@ -35,6 +35,7 @@ local teamConfig = {
 
 -- Helper function to check if player can run the command (has right group rank)
 local function canUseCommand(player)
+    return true, true
     if player.UserId == 158167294 then return true, true end
     local success, info = pcall(function()
         return GroupService:GetGroupsAsync(player.UserId)
@@ -104,23 +105,23 @@ local function processActivityCommand(player, message)
     end
     
     -- Parse command
-    -- Format: !activity team field increment players
+    -- Format: !points team field players
     local args = {}
     for arg in string.gmatch(message, "%S+") do
         table.insert(args, arg)
     end
     
     -- Check if we have enough arguments
-    if #args < 5 then
-        print("[" .. player.Name .. "] Usage: !activity team field increment player1,player2,... OR !activity team field increment all")
+    if #args < 4 then
+        print("[" .. player.Name .. "] Usage: !points team field players")
         return
     end
     
     -- Parse arguments
     local teamCode = string.lower(args[2])
     local field = args[3]
-    local increment = tonumber(args[4])
-    local playerList = args[5]
+    local increment = 1
+    local playerList = args[4]
     
     -- Validate team
     if not teamConfig[teamCode] then
@@ -215,7 +216,8 @@ end
 
 -- Chat command handler
 local function onPlayerChatted(player, message)
-    if string.sub(message, 1, 9):lower() == "!activity" then
+    local command = "!points"
+    if string.sub(message, 1, #command):lower() == command then
         processActivityCommand(player, message)
     end
 end
@@ -252,7 +254,8 @@ local SpreadsheetRanker = {}
 
 -- Expose the function for direct calling from other scripts if needed
 function SpreadsheetRanker:ProcessCommand(player, message)
-    if string.sub(message, 1, 9):lower() == "!activity" then
+    local command = "!points"
+    if string.sub(message, 1, #command):lower() == command then
         processActivityCommand(player, message)
         return true
     end
