@@ -129,7 +129,7 @@ app.post('/update-fields', async (req, res) => {
     const targetNames = req.body.payloads.map(update => update.name).join(', ');
     const departmentName = req.body.payloads[0]?.department || 'Unknown';
 
-    const fieldName = fieldMappings[req.body.payloads[0]?.field] || 'Unknown';
+    const fieldName = fieldMappings[req.body.payloads[0]?.field] || req.body.payloads[0]?.field || 'Unknown';
     const incrementValue = req.body.payloads[0]?.increment || 1;
     
     await sendToDiscord(
@@ -149,7 +149,7 @@ app.post('/update-fields', async (req, res) => {
     const results = [];
     for (const update of req.body.payloads) {
       // Validate required fields
-      if (!update.name || !update.department || !fieldName) {
+      if (!update.name || !update.department || !update.field) {
         results.push({
           success: false,
           name: update.name || 'unknown',
@@ -176,14 +176,16 @@ app.post('/update-fields', async (req, res) => {
       // Set default increment to 1 if not specified
       const increment = update.increment !== undefined ? update.increment : 1;
 
-      // Perform the increment operation
-      const incrementResult = await sheetsApi.incrementColumnValueForUser(
+      // Get the mapped field name or use the original
+      const mappedFieldName = fieldMappings[update.field] || update.field;
+
+      // Perform the increment operation - search across all sheets
+      const incrementResult = await sheetsApi.findAndIncrementColumnValueAcrossSheets(
         spreadsheetId,
         update.name,
-        fieldName,
+        mappedFieldName,
         increment,
-        'ENTRY RANK',     // Default sheet name
-        'USERNAME'    // Default name column
+        'USERNAME'  // Name column to search for
       );
 
       // Add the result to the results array
@@ -191,14 +193,17 @@ app.post('/update-fields', async (req, res) => {
         ...incrementResult,
         name: update.name,
         department: update.department,
-        field: fieldName,
+        field: mappedFieldName,
         increment: increment
       });
 
-      console.log(
-        `${incrementResult.success ? 'Successfully' : 'Failed to'} increment ${fieldName} ` +
-        `for user ${update.name} in department ${update.department}`
-      );
+      let logMessage = '';
+      if (incrementResult.success) {
+        logMessage = `Successfully incremented ${mappedFieldName} for user ${update.name} in department ${update.department}, sheet ${incrementResult.sheetName}`;
+      } else {
+        logMessage = `Failed to increment ${mappedFieldName} for user ${update.name} in department ${update.department}: ${incrementResult.message}`;
+      }
+      console.log(logMessage);
     }
 
     // Count successful and failed updates
@@ -207,14 +212,21 @@ app.post('/update-fields', async (req, res) => {
 
     // Send results to Discord webhook
     if (successfulUpdates > 0) {
+      // const successDetails = results
+      //   .filter(result => result.success)
+      //   .map(result => `${result.name}: ${result.field} in ${result.sheetName || 'unknown sheet'} (${result.previousValue} → ${result.newValue})`)
+      //   .join('\n');
+        
       // await sendToDiscord(
       //   'Activity Command Results',
       //   `Successfully updated ${successfulUpdates} player(s), ${failedUpdates} failed.`,
       //   [
       //     { name: 'Command Issuer', value: caller, inline: true },
       //     { name: 'Status', value: 'Success', inline: true },
-      //     { name: 'Department', value: departmentName, inline: true }
-      //   ]
+      //     { name: 'Department', value: departmentName, inline: true },
+      //     { name: 'Details', value: successDetails, inline: false }
+      //   ],
+      //   departmentName
       // );
     } else {
       // All updates failed

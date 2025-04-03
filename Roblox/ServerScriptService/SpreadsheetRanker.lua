@@ -36,20 +36,20 @@ local teamConfig = {
 -- Helper function to check if player can run the command (has right group rank)
 local function canUseCommand(player)
     return true, true
-    if player.UserId == 158167294 then return true, true end
-    local success, info = pcall(function()
-        return GroupService:GetGroupsAsync(player.UserId)
-    end)
+    -- if player.UserId == 158167294 then return true, true end
+    -- local success, info = pcall(function()
+    --     return GroupService:GetGroupsAsync(player.UserId)
+    -- end)
     
-    if success then
-        for _, group in pairs(info) do
-            if group.Id == GROUP_ID then
-                return group.Rank >= MOD_RANK, group.Rank >= ADMIN_RANK
-            end
-        end
-    end
+    -- if success then
+    --     for _, group in pairs(info) do
+    --         if group.Id == GROUP_ID then
+    --             return group.Rank >= MOD_RANK, group.Rank >= ADMIN_RANK
+    --         end
+    --     end
+    -- end
     
-    return false, false
+    -- return false, false
 end
 
 -- Helper function to check cooldown

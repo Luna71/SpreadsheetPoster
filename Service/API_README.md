@@ -52,6 +52,16 @@ When enabled, the API will send notifications about:
 - The results of the operation (success or failure)
 - Any errors that occur during processing
 
+## Cross-Sheet Functionality
+
+The API automatically searches across all sheets in a spreadsheet for a username. When a name is found, it updates the specified field in that sheet. This allows you to track users who might appear in different sheets within the same spreadsheet.
+
+Key features:
+- Searches all sheets in a spreadsheet for a username
+- Updates fields when the username is found in any sheet
+- Reports back which sheet was updated in the response
+- If a user appears in multiple sheets, it updates the first occurrence found
+
 ## API Endpoints
 
 ### GET /
@@ -115,6 +125,7 @@ Parameters:
       "row": 3,
       "column": 5,
       "columnLetter": "E",
+      "sheetName": "Sheet1",
       "name": "username",
       "department": "department_code",
       "field": "field_name",
@@ -127,6 +138,7 @@ Parameters:
       "row": 4,
       "column": 6,
       "columnLetter": "F",
+      "sheetName": "Sheet2",
       "name": "another_user",
       "department": "department_code",
       "field": "another_field",

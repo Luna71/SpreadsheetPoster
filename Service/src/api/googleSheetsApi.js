@@ -352,6 +352,137 @@ class GoogleSheetsApi {
       return false;
     }
   }
+
+  /**
+   * Get all sheet names in a spreadsheet
+   * @param {string} spreadsheetId - The ID of the spreadsheet
+   * @returns {Promise<Array<string>>} - Array of sheet names
+   */
+  async getSheetNames(spreadsheetId) {
+    if (!this.initialized) {
+      const initSuccess = this.init();
+      if (!initSuccess) return [];
+    }
+
+    try {
+      const response = await this.sheets.spreadsheets.get({
+        spreadsheetId,
+        fields: 'sheets.properties'
+      });
+
+      return response.data.sheets.map(sheet => sheet.properties.title);
+    } catch (error) {
+      console.error('Error fetching sheet names:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Find and increment a numeric column value for a user across all sheets in a spreadsheet
+   * @param {string} spreadsheetId - The ID of the spreadsheet
+   * @param {string} name - The name of the user to search for
+   * @param {string} columnName - The name of the column to increment (e.g. 'Points2')
+   * @param {number} incrementBy - Amount to increment by (default: 1)
+   * @param {string} nameColumn - Optional column to search for the name in (default: 'Username')
+   * @returns {Promise<{success: boolean, newValue?: number, previousValue?: number, message?: string, sheetName?: string}>} - Result object with success status and values
+   */
+  async findAndIncrementColumnValueAcrossSheets(spreadsheetId, name, columnName, incrementBy = 1, nameColumn = 'USERNAME') {
+    if (!this.initialized) {
+      const initSuccess = this.init();
+      if (!initSuccess) return { success: false, message: 'Failed to initialize Google Sheets API' };
+    }
+
+    try {
+      // Get all sheet names in the spreadsheet
+      const sheetNames = await this.getSheetNames(spreadsheetId);
+      
+      if (sheetNames.length === 0) {
+        return { 
+          success: false, 
+          message: 'No sheets found in spreadsheet'
+        };
+      }
+
+      // Search for the user in each sheet
+      for (const sheetName of sheetNames) {
+        console.log(`Searching for user ${name} in sheet ${sheetName}...`);
+        
+        // Attempt to find the user in this sheet
+        const userResult = await this.findNameInSheet(spreadsheetId, name, sheetName, nameColumn);
+        
+        if (userResult.found) {
+          console.log(`Found user ${name} in sheet ${sheetName}, row ${userResult.row}`);
+          
+          // Get the header row to find the column index
+          const headerRow = userResult.allData[0];
+          const columnIndex = headerRow.findIndex(
+            header => header && header.toLowerCase().trim() === columnName.toLowerCase().trim()
+          );
+
+          if (columnIndex === -1) {
+            console.log(`Column "${columnName}" not found in sheet ${sheetName} headers`);
+            continue; // Try the next sheet
+          }
+
+          // Get the current value from the user's row at the column index
+          const userRow = userResult.rowData;
+          const value = columnIndex < userRow.length ? userRow[columnIndex] : null;
+          
+          // Get the current value, defaulting to 0 if not present or not a number
+          let currentValue = 0;
+          if (value !== null && value !== undefined) {
+            // Try to convert the value to a number
+            currentValue = Number(value);
+            if (isNaN(currentValue)) {
+              console.log(`Value '${value}' in ${columnName} for user ${name} in sheet ${sheetName} is not a number`);
+              continue; // Try the next sheet
+            }
+          }
+
+          // Calculate the new value
+          const newValue = currentValue + incrementBy;
+          
+          // Update the cell with the new value
+          const columnLetter = String.fromCharCode(65 + columnIndex);
+          const cellAddress = `${sheetName}!${columnLetter}${userResult.row}`;
+          
+          console.log(`Updating cell ${cellAddress} from ${currentValue} to ${newValue}`);
+          
+          const updateSuccess = await this.updateSheetData(
+            spreadsheetId,
+            cellAddress,
+            [[newValue.toString()]]  // Wrap in double array for Google Sheets API format
+          );
+
+          if (!updateSuccess) {
+            return { 
+              success: false, 
+              message: `Failed to update ${columnName} for user ${name} in sheet ${sheetName}`
+            };
+          }
+
+          return {
+            success: true,
+            previousValue: currentValue,
+            newValue: newValue,
+            row: userResult.row,
+            column: columnIndex + 1,
+            columnLetter: columnLetter,
+            sheetName: sheetName
+          };
+        }
+      }
+
+      // If we get here, the user was not found in any sheet
+      return { 
+        success: false, 
+        message: `User "${name}" not found in any sheet in the spreadsheet`
+      };
+    } catch (error) {
+      console.error('Error finding and incrementing column value across sheets:', error);
+      return { success: false, error: error.message };
+    }
+  }
 }
 
 module.exports = new GoogleSheetsApi(); 
