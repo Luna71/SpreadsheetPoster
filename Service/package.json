@@ -1,0 +1,18 @@
+{
+  "name": "spreadsheet-rank-service",
+  "version": "1.0.0",
+  "description": "Update a Google Spreadsheet based on usernames for event tracking",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "generate-token": "node generate-token.js"
+  },
+  "author": "zalh (_x86)",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "googleapis": "^148.0.0"
+  }
+}
