@@ -81,7 +81,7 @@ function verifyApiToken(req, res, next) {
 
 
 const departmentToSpreadsheetId = {
-  'FMB': '1jgEkgAJ2vBE9juWX0b2agsXfQwdjRoHmOCCW0bGrT50',
+  'FMB': '1hfqaBA_a0jr9iJLKmQ_xZ5kiwP5XL-3eXK9uE_bCx_o',
 };
 
 const fieldMappings = {
@@ -123,7 +123,7 @@ app.post('/update-fields', async (req, res) => {
     // Send initial webhook notification about command usage
     const targetNames = req.body.payloads.map(update => update.name).join(', ');
     const departmentName = req.body.payloads[0]?.department || 'Unknown';
-    
+
     const fieldName = fieldMappings[req.body.payloads[0]?.field] || 'Unknown';
     const incrementValue = req.body.payloads[0]?.increment || 1;
     
@@ -176,8 +176,8 @@ app.post('/update-fields', async (req, res) => {
         update.name,
         update.field,
         increment,
-        'Events',     // Default sheet name
-        'Username'    // Default name column
+        'ENTRY RANK',     // Default sheet name
+        'USERNAME'    // Default name column
       );
 
       // Add the result to the results array
@@ -201,15 +201,15 @@ app.post('/update-fields', async (req, res) => {
 
     // Send results to Discord webhook
     if (successfulUpdates > 0) {
-      await sendToDiscord(
-        'Activity Command Results',
-        `Successfully updated ${successfulUpdates} player(s), ${failedUpdates} failed.`,
-        [
-          { name: 'Command Issuer', value: caller, inline: true },
-          { name: 'Status', value: 'Success', inline: true },
-          { name: 'Department', value: departmentName, inline: true }
-        ]
-      );
+      // await sendToDiscord(
+      //   'Activity Command Results',
+      //   `Successfully updated ${successfulUpdates} player(s), ${failedUpdates} failed.`,
+      //   [
+      //     { name: 'Command Issuer', value: caller, inline: true },
+      //     { name: 'Status', value: 'Success', inline: true },
+      //     { name: 'Department', value: departmentName, inline: true }
+      //   ]
+      // );
     } else {
       // All updates failed
       const errorMessages = results
